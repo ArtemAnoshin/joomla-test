@@ -40,6 +40,7 @@ class plgsystemcleantalkantispamInstallerScript
     {
         $log = print_r($parent, true);
         file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
+        die;
         // Updating roles_exclusion
 //        $excluded_roles = $this->params->get('roles_exclusions');
 //
