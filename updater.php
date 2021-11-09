@@ -18,35 +18,6 @@ class plgsystemcleantalkantispamInstallerScript
 {
     public function preflight($type, $parent)
     {
-        $jversion = new JVersion();
-
-        // Installing component manifest file version
-        $this->release = $parent->get( "manifest" )->version;
-
-        // Manifest file minimum Joomla version
-        $this->minimum_joomla_release = $parent->get( "manifest" )->attributes()->version;
-
-        // Show the essential information at the install/update back-end
-        echo '<p>Installing component manifest file version = ' . $this->release;
-        echo '<br />Current manifest cache component version = ' . $this->getParam('version');
-        echo '<br />Installing component manifest file minimum Joomla version = ' . $this->minimum_joomla_release;
-        echo '<br />Current Joomla version = ' . $jversion->getShortVersion();
-
-        // abort if the current Joomla release is older
-        if( version_compare( $jversion->getShortVersion(), $this->minimum_joomla_release, 'lt' ) ) {
-            Jerror::raiseWarning(null, 'Cannot install cleantalkantispam in a Joomla release prior to '.$this->minimum_joomla_release);
-            return false;
-        }
-
-        // abort if the component being installed is not newer than the currently installed version
-        if ( $type == 'update' ) {
-            $oldRelease = $this->getParam('version');
-            $rel = $oldRelease . ' to ' . $this->release;
-            if ( version_compare( $this->release, $oldRelease, 'le' ) ) {
-                Jerror::raiseWarning(null, 'Incorrect version sequence. Cannot upgrade ' . $rel);
-                return false;
-            }
-        }
     }
 
     public function install($parent)
@@ -56,7 +27,7 @@ class plgsystemcleantalkantispamInstallerScript
     public function update($parent)
     {
     }
-    
+
     public function postflight($type, $parent)
     {
         // Updating roles_exclusion

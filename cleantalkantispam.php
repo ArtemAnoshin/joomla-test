@@ -56,7 +56,7 @@ class plgSystemCleantalkantispam extends JPlugin
      * Plugin version string for server
      * @since         1.0
      */
-    const ENGINE = 'joomla34-22';
+    const ENGINE = 'joomla34-21';
 
     /*
      * Flag marked JComments form initilization.
@@ -457,38 +457,6 @@ class plgSystemCleantalkantispam extends JPlugin
         //Sending agent version
         if ($this->params->get('apikey') && $this->params->get('apikey') !== '')
             $this->ctSendFeedback($this->params->get('apikey'), '0:' . self::ENGINE);
-        
-        // Updating roles_exclusion
-        $excluded_roles = $this->params->get('roles_exclusions');
-		
-		$log = print_r($excluded_roles, true);
-		file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-
-        if (is_array($excluded_roles)) {
-            $default_roles = self::getGroups();
-            $new_data_roles_excluded = array();
-			$log = print_r($default_roles, true);
-			file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-            foreach ($default_roles as $default_role) {
-                if (in_array(strtolower($default_role->id), $excluded_roles)) {
-                    $new_data_roles_excluded[] = strtolower($default_role->title);
-                }
-            }
-			$log = print_r($new_data_roles_excluded, true);
-			file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-            $this->params->set('roles_exclusions', implode(',', $new_data_roles_excluded));
-
-            $db = JFactory::getDbo();
-            $query = $db->getQuery(true);
-            $query->clear()->update($db->quoteName('#__extensions'));
-            $query->set($db->quoteName('params') . '= ' . $db->quote((string) $this->params));
-            $query->where($db->quoteName('element') . ' = ' . $db->quote('cleantalkantispam'));
-            $query->where($db->quoteName('folder') . ' = ' . $db->quote('system'));
-            $db->setQuery($query);
-            $db->execute();
-			$log = print_r($db, true);
-			file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-        }
     }
 
     /**
@@ -1581,7 +1549,7 @@ class plgSystemCleantalkantispam extends JPlugin
             // Roles Exclusions
             $excluded_roles = $this->params->get('roles_exclusions');
 
-            if ( ! is_null( $excluded_roles ) ) {
+            if ( is_string($excluded_roles) && !empty($excluded_roles) ) {
                 $excluded_roles = explode(',', $excluded_roles);
                 $default_roles = self::getGroups();
                 $excluded_roles_ids = array();
