@@ -16,67 +16,70 @@ defined('_JEXEC') or die('Restricted access');
 
 class plgsystemcleantalkantispamInstallerScript
 {
-    public function __construct($adapter)
+    public function preflight($type, $parent)
     {
-        $log = print_r('plgsystemcleantalkantispamInstallerScript->__construct', true);
-        file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
+        $jversion = new JVersion();
+
+        // Installing component manifest file version
+        $this->release = $parent->get( "manifest" )->version;
+
+        // Manifest file minimum Joomla version
+        $this->minimum_joomla_release = $parent->get( "manifest" )->attributes()->version;
+
+        // Show the essential information at the install/update back-end
+        echo '<p>Installing component manifest file version = ' . $this->release;
+        echo '<br />Current manifest cache component version = ' . $this->getParam('version');
+        echo '<br />Installing component manifest file minimum Joomla version = ' . $this->minimum_joomla_release;
+        echo '<br />Current Joomla version = ' . $jversion->getShortVersion();
+
+        // abort if the current Joomla release is older
+        if( version_compare( $jversion->getShortVersion(), $this->minimum_joomla_release, 'lt' ) ) {
+            Jerror::raiseWarning(null, 'Cannot install cleantalkantispam in a Joomla release prior to '.$this->minimum_joomla_release);
+            return false;
+        }
+
+        // abort if the component being installed is not newer than the currently installed version
+        if ( $type == 'update' ) {
+            $oldRelease = $this->getParam('version');
+            $rel = $oldRelease . ' to ' . $this->release;
+            if ( version_compare( $this->release, $oldRelease, 'le' ) ) {
+                Jerror::raiseWarning(null, 'Incorrect version sequence. Cannot upgrade ' . $rel);
+                return false;
+            }
+        }
     }
-    public function preflight($route, $adapter)
-    {
-        $log = print_r('plgsystemcleantalkantispamInstallerScript->preflight', true);
-        file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-    }
-    public function postflight($route, $adapter)
-    {
-        $log = print_r('plgsystemcleantalkantispamInstallerScript->postflight', true);
-        file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-    }
+
     public function install($parent)
     {
-        $log = print_r('plgsystemcleantalkantispamInstallerScript->install', true);
-        file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
     }
+
     public function update($parent)
     {
-        $log = print_r($parent, true);
-        file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-        die;
-        // Updating roles_exclusion
-//        $excluded_roles = $this->params->get('roles_exclusions');
-//
-//        $log = print_r($excluded_roles, true);
-//        file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-//
-//        if (is_array($excluded_roles)) {
-//            $default_roles = self::getGroups();
-//            $new_data_roles_excluded = array();
-//            $log = print_r($default_roles, true);
-//            file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-//            foreach ($default_roles as $default_role) {
-//                if (in_array(strtolower($default_role->id), $excluded_roles)) {
-//                    $new_data_roles_excluded[] = strtolower($default_role->title);
-//                }
-//            }
-//            $log = print_r($new_data_roles_excluded, true);
-//            file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-//            $this->params->set('roles_exclusions', implode(',', $new_data_roles_excluded));
-//
-//            $db = JFactory::getDbo();
-//            $query = $db->getQuery(true);
-//            $query->clear()->update($db->quoteName('#__extensions'));
-//            $query->set($db->quoteName('params') . '= ' . $db->quote((string) $this->params));
-//            $query->where($db->quoteName('element') . ' = ' . $db->quote('cleantalkantispam'));
-//            $query->where($db->quoteName('folder') . ' = ' . $db->quote('system'));
-//            $db->setQuery($query);
-//            $db->execute();
-//            $log = print_r($db, true);
-//            file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
-//        }
     }
+    
+    public function postflight($type, $parent)
+    {
+        // Updating roles_exclusion
+        $excluded_roles = $this->getParam('roles_exclusions');
+
+        if (is_array($excluded_roles)) {
+            $default_roles = self::getGroups();
+            $new_data_roles_excluded = array();
+
+            foreach ($default_roles as $default_role) {
+                if (in_array(strtolower($default_role->id), $excluded_roles)) {
+                    $new_data_roles_excluded[] = strtolower($default_role->title);
+                }
+            }
+
+            $params['roles_exclusions'] = implode(',', $new_data_roles_excluded);
+            $this->setParams($params);
+        }
+    }
+
+
     public function uninstall($parent)
     {
-        $log = print_r('plgsystemcleantalkantispamInstallerScript->uninstall', true);
-        file_put_contents(__DIR__ . '/log.txt', $log . PHP_EOL, FILE_APPEND);
     }
 
     /**
@@ -93,5 +96,37 @@ class plgsystemcleantalkantispamInstallerScript
         $db->setQuery($query);
 
         return $db->loadObjectList();
+    }
+
+    /*
+	 * get a variable from the manifest file (actually, from the manifest cache).
+	 */
+    function getParam( $name ) {
+        $db = JFactory::getDbo();
+        $db->setQuery('SELECT params FROM #__extensions WHERE element = "cleantalkantispam"');
+        $params = json_decode( $db->loadResult(), true );
+        return $params[ $name ];
+    }
+
+    /*
+     * sets parameter values in the component's row of the extension table
+     */
+    function setParams($param_array) {
+        if ( count($param_array) > 0 ) {
+            // read the existing component value(s)
+            $db = JFactory::getDbo();
+            $db->setQuery('SELECT params FROM #__extensions WHERE element = "cleantalkantispam"');
+            $params = json_decode( $db->loadResult(), true );
+            // add the new variable(s) to the existing one(s)
+            foreach ( $param_array as $name => $value ) {
+                $params[ (string) $name ] = (string) $value;
+            }
+            // store the combined new and existing values back as a JSON string
+            $paramsString = json_encode( $params );
+            $db->setQuery('UPDATE #__extensions SET params = ' .
+                          $db->quote( $paramsString ) .
+                          ' WHERE element = "cleantalkantispam"' );
+            $db->query();
+        }
     }
 }
