@@ -15,6 +15,6 @@
         </tags>
         <section>Updates</section>
         <targetplatform name="joomla" version="3.[1234567890]"/>
-        <client>administrator</client>
+        <client>site</client>
     </update>
 </updates>
